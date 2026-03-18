@@ -187,19 +187,29 @@ describe("Reader", () => {
     expect(screen.getByTestId("word-display")).toHaveTextContent("the");
   });
 
+  it("context panel visible by default", async () => {
+    render(<Reader {...defaultProps} />);
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+
+    expect(screen.getByLabelText("Hide context")).toBeInTheDocument();
+  });
+
   it("toggles context panel with button", async () => {
     render(<Reader {...defaultProps} />);
     await act(async () => {
       await vi.runAllTimersAsync();
     });
 
-    expect(screen.getByLabelText("Show context")).toBeInTheDocument();
-
-    fireEvent.click(screen.getByLabelText("Show context"));
+    // Default is visible
     expect(screen.getByLabelText("Hide context")).toBeInTheDocument();
 
     fireEvent.click(screen.getByLabelText("Hide context"));
     expect(screen.getByLabelText("Show context")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText("Show context"));
+    expect(screen.getByLabelText("Hide context")).toBeInTheDocument();
   });
 
   it("toggles context panel with C key", async () => {
@@ -208,9 +218,7 @@ describe("Reader", () => {
       await vi.runAllTimersAsync();
     });
 
-    fireEvent.keyDown(window, { key: "c" });
-    expect(screen.getByLabelText("Hide context")).toBeInTheDocument();
-
+    // Default is visible, C hides it
     fireEvent.keyDown(window, { key: "c" });
     expect(screen.getByLabelText("Show context")).toBeInTheDocument();
   });

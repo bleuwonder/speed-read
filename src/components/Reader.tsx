@@ -58,7 +58,7 @@ export default function Reader({
   const [loading, setLoading] = useState(true);
   const [pendingChapter, setPendingChapter] = useState<number | null>(null);
   const [saveError, setSaveError] = useState(false);
-  const [showContext, setShowContext] = useState(false);
+  const [showContext, setShowContext] = useState(true);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const wordIndexRef = useRef(wordIndex);
@@ -207,16 +207,18 @@ export default function Reader({
   const orpIdx = getOrpIndex(currentWord);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen gap-4 sm:gap-6 px-4 select-none">
-      {/* Context panel — above the word display */}
-      {showContext && !loading && (
-        <ContextPanel
-          words={words}
-          paragraphBreaks={paragraphBreaks}
-          wordIndex={wordIndex}
-          onWordClick={(idx) => setWordIndex(idx)}
-        />
-      )}
+    <div className="flex flex-col items-center min-h-screen pt-8 sm:pt-12 gap-4 sm:gap-6 px-4 select-none">
+      {/* Context panel — fixed height container so RSVP word doesn't shift */}
+      <div className="w-full max-w-lg h-[30vh]">
+        {showContext && !loading && words.length > 0 && (
+          <ContextPanel
+            words={words}
+            paragraphBreaks={paragraphBreaks}
+            wordIndex={wordIndex}
+            onWordClick={(idx) => setWordIndex(idx)}
+          />
+        )}
+      </div>
 
       {/* Word display */}
       <div

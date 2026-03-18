@@ -55,7 +55,7 @@ export default function ContextPanel({ words, paragraphBreaks, wordIndex, onWord
   if (words.length === 0 || paragraphBreaks.length === 0) return null;
 
   return (
-    <div className="w-full max-w-lg max-h-[40vh] overflow-y-auto rounded-lg bg-foreground/[0.03] border border-foreground/[0.06] px-5 py-4 text-sm leading-relaxed scroll-smooth">
+    <div className="w-full h-full overflow-y-auto rounded-lg bg-foreground/[0.03] border border-foreground/[0.06] px-5 py-4 text-sm leading-relaxed scroll-smooth">
       {visibleParagraphs.map((para) => (
         <p
           key={para.paraIdx}
