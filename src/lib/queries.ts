@@ -43,7 +43,7 @@ export function insertBook(
     "INSERT INTO books (id, title, author, filename, format, total_words) VALUES (?, ?, ?, ?, ?, ?)"
   );
   const insertChapterStmt = db.prepare(
-    "INSERT INTO chapters (id, book_id, chapter_index, title, word_offset, word_count, words) VALUES (?, ?, ?, ?, ?, ?, ?)"
+    "INSERT INTO chapters (id, book_id, chapter_index, title, word_offset, word_count, words, paragraph_breaks) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
   );
 
   const insert = db.transaction(() => {
@@ -59,7 +59,8 @@ export function insertBook(
         ch.title,
         wordOffset,
         ch.words.length,
-        JSON.stringify(ch.words)
+        JSON.stringify(ch.words),
+        JSON.stringify(ch.paragraphBreaks)
       );
       wordOffset += ch.words.length;
     }
@@ -107,13 +108,16 @@ export function getBookChapters(bookId: string): Omit<ChapterRow, "words">[] {
     .all(bookId) as Omit<ChapterRow, "words">[];
 }
 
-export function getChapterWords(bookId: string, chapterIndex: number): string[] | null {
+export function getChapterContent(bookId: string, chapterIndex: number): { words: string[]; paragraphBreaks: number[] } | null {
   const db = getDb();
   const row = db
-    .prepare("SELECT words FROM chapters WHERE book_id = ? AND chapter_index = ?")
-    .get(bookId, chapterIndex) as { words: string } | undefined;
+    .prepare("SELECT words, paragraph_breaks FROM chapters WHERE book_id = ? AND chapter_index = ?")
+    .get(bookId, chapterIndex) as { words: string; paragraph_breaks: string } | undefined;
   if (!row) return null;
-  return JSON.parse(row.words);
+  return {
+    words: JSON.parse(row.words),
+    paragraphBreaks: JSON.parse(row.paragraph_breaks),
+  };
 }
 
 export function deleteBook(id: string): boolean {

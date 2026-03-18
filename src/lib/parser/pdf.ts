@@ -1,12 +1,8 @@
 import { getDocumentProxy, extractText } from "unpdf";
 import { readFile } from "fs/promises";
 import type { ParsedBook, ParsedChapter } from "./types";
-import { textToWords } from "./utils";
+import { textToParagraphs } from "./utils";
 
-// Detect if a page starts with what looks like a chapter heading:
-// - Short first line (< 50 chars)
-// - Matches common chapter patterns (Chapter X, Part X, roman numerals, etc.)
-// - Or first line is ALL CAPS and short
 const CHAPTER_PATTERN =
   /^(chapter|part|section|prologue|epilogue|introduction|conclusion|preface|foreword|afterword|appendix)\b/i;
 const NUMBERED_PATTERN = /^([\dIVXLCDMivxlcdm]+[.\s:)]|[\d]+\s)/;
@@ -35,24 +31,31 @@ export async function parsePdf(filePath: string): Promise<ParsedBook> {
     const pageText = pages[i].trim();
     if (!pageText) continue;
 
-    const words = textToWords(pageText);
+    const { words, paragraphBreaks } = textToParagraphs(pageText);
     if (words.length === 0) continue;
 
     const chapterTitle = isChapterStart(pageText);
 
     if (chapterTitle !== null) {
-      chapters.push({ title: chapterTitle, words: [...words] });
+      chapters.push({ title: chapterTitle, words: [...words], paragraphBreaks: [...paragraphBreaks] });
     } else if (chapters.length > 0) {
-      chapters[chapters.length - 1].words.push(...words);
+      // Append to current chapter — offset paragraph breaks
+      const prev = chapters[chapters.length - 1];
+      const offset = prev.words.length;
+      for (const pb of paragraphBreaks) {
+        prev.paragraphBreaks.push(pb + offset);
+      }
+      prev.words.push(...words);
     } else {
-      chapters.push({ title: "Chapter 1", words: [...words] });
+      chapters.push({ title: "Chapter 1", words: [...words], paragraphBreaks: [...paragraphBreaks] });
     }
   }
 
   if (chapters.length === 0) {
-    const allWords = pages.flatMap((p) => textToWords(p.trim()));
-    if (allWords.length > 0) {
-      chapters.push({ title: "Chapter 1", words: allWords });
+    const allText = pages.join("\n\n");
+    const { words, paragraphBreaks } = textToParagraphs(allText);
+    if (words.length > 0) {
+      chapters.push({ title: "Chapter 1", words, paragraphBreaks });
     }
   }
 

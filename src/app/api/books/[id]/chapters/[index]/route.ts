@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getBook, getChapterWords } from "@/lib/queries";
+import { getBook, getChapterContent } from "@/lib/queries";
 
 export async function GET(
   _request: NextRequest,
@@ -17,10 +17,10 @@ export async function GET(
     return NextResponse.json({ error: "Book not found" }, { status: 404 });
   }
 
-  const words = getChapterWords(id, chapterIndex);
-  if (!words) {
+  const content = getChapterContent(id, chapterIndex);
+  if (!content) {
     return NextResponse.json({ error: "Chapter not found" }, { status: 404 });
   }
 
-  return NextResponse.json({ words });
+  return NextResponse.json(content);
 }

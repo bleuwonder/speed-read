@@ -1,6 +1,6 @@
 import { initEpubFile } from "@lingo-reader/epub-parser";
 import type { ParsedBook, ParsedChapter } from "./types";
-import { textToWords, stripHtml } from "./utils";
+import { htmlToParagraphs } from "./utils";
 
 export async function parseEpub(filePath: string): Promise<ParsedBook> {
   const epub = await initEpubFile(filePath);
@@ -21,20 +21,19 @@ export async function parseEpub(filePath: string): Promise<ParsedBook> {
     }
   }
 
-  const spineContent: { id: string; href: string; words: string[]; tocTitle: string | null }[] = [];
+  const spineContent: { id: string; href: string; words: string[]; paragraphBreaks: number[]; tocTitle: string | null }[] = [];
 
   for (const item of spine) {
     const chapter = await epub.loadChapter(item.id);
     if (!chapter?.html) continue;
 
-    const text = stripHtml(chapter.html);
-    const words = textToWords(text);
+    const { words, paragraphBreaks } = htmlToParagraphs(chapter.html);
     if (words.length === 0) continue;
 
     const baseHref = item.href?.split("#")[0] || "";
     const tocTitle = tocEntries.get(item.id) || tocEntries.get(baseHref) || null;
 
-    spineContent.push({ id: item.id, href: baseHref, words, tocTitle });
+    spineContent.push({ id: item.id, href: baseHref, words, paragraphBreaks, tocTitle });
   }
 
   const hasToc = spineContent.some((s) => s.tocTitle !== null);
@@ -43,11 +42,17 @@ export async function parseEpub(filePath: string): Promise<ParsedBook> {
   if (hasToc) {
     for (const item of spineContent) {
       if (item.tocTitle !== null) {
-        chapters.push({ title: item.tocTitle, words: [...item.words] });
+        chapters.push({ title: item.tocTitle, words: [...item.words], paragraphBreaks: [...item.paragraphBreaks] });
       } else if (chapters.length > 0) {
-        chapters[chapters.length - 1].words.push(...item.words);
+        // Merge into previous chapter — offset paragraph breaks
+        const prev = chapters[chapters.length - 1];
+        const offset = prev.words.length;
+        for (const pb of item.paragraphBreaks) {
+          prev.paragraphBreaks.push(pb + offset);
+        }
+        prev.words.push(...item.words);
       } else {
-        chapters.push({ title: "Front Matter", words: [...item.words] });
+        chapters.push({ title: "Front Matter", words: [...item.words], paragraphBreaks: [...item.paragraphBreaks] });
       }
     }
   } else {
@@ -55,6 +60,7 @@ export async function parseEpub(filePath: string): Promise<ParsedBook> {
       chapters.push({
         title: `Chapter ${i + 1}`,
         words: [...spineContent[i].words],
+        paragraphBreaks: [...spineContent[i].paragraphBreaks],
       });
     }
   }

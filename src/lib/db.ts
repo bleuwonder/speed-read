@@ -40,6 +40,7 @@ export function migrate(database: Database.Database) {
       word_offset INTEGER NOT NULL,
       word_count INTEGER NOT NULL,
       words JSON NOT NULL,
+      paragraph_breaks JSON NOT NULL DEFAULT '[]',
       UNIQUE(book_id, chapter_index)
     );
 

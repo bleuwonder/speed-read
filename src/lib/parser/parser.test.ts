@@ -21,10 +21,14 @@ describe("EPUB parser", () => {
     expect(book.chapters[1].title).toBe("Chapter Two");
   });
 
-  it("chapters contain words", async () => {
+  it("chapters contain words and paragraph breaks", async () => {
     const book = await parseEpub(path.join(FIXTURES, "test.epub"));
     expect(book.chapters[0].words.length).toBeGreaterThan(0);
     expect(book.chapters[1].words.length).toBeGreaterThan(0);
+    for (const ch of book.chapters) {
+      expect(ch.paragraphBreaks.length).toBeGreaterThan(0);
+      expect(ch.paragraphBreaks[0]).toBe(0);
+    }
   });
 
   it("strips HTML tags from chapter content", async () => {
@@ -102,8 +106,11 @@ describe("unified parseBook", () => {
       for (const ch of book.chapters) {
         expect(ch).toHaveProperty("title");
         expect(ch).toHaveProperty("words");
+        expect(ch).toHaveProperty("paragraphBreaks");
         expect(Array.isArray(ch.words)).toBe(true);
+        expect(Array.isArray(ch.paragraphBreaks)).toBe(true);
         expect(ch.words.every((w: string) => typeof w === "string")).toBe(true);
+        expect(ch.paragraphBreaks[0]).toBe(0);
       }
     }
   });

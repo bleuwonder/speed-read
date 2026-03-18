@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import ContextPanel from "./ContextPanel";
 
 interface ReaderProps {
   bookId: string;
@@ -18,6 +19,28 @@ function getOrpIndex(word: string): number {
   return Math.floor(len * 0.33);
 }
 
+function ContextToggleIcon({ active }: { active: boolean }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={active ? 2.5 : 1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <line x1="3" y1="6" x2="21" y2="6" />
+      <line x1="3" y1="10" x2="21" y2="10" />
+      <line x1="3" y1="14" x2="18" y2="14" />
+      <line x1="3" y1="18" x2="15" y2="18" />
+    </svg>
+  );
+}
+
 export default function Reader({
   bookId,
   initialChapterIndex,
@@ -27,6 +50,7 @@ export default function Reader({
   chapterTitles,
 }: ReaderProps) {
   const [words, setWords] = useState<string[]>([]);
+  const [paragraphBreaks, setParagraphBreaks] = useState<number[]>([]);
   const [chapterIndex, setChapterIndex] = useState(initialChapterIndex);
   const [wordIndex, setWordIndex] = useState(initialWordIndex);
   const [wpm, setWpm] = useState(initialWpm);
@@ -34,6 +58,7 @@ export default function Reader({
   const [loading, setLoading] = useState(true);
   const [pendingChapter, setPendingChapter] = useState<number | null>(null);
   const [saveError, setSaveError] = useState(false);
+  const [showContext, setShowContext] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const wordIndexRef = useRef(wordIndex);
@@ -53,13 +78,13 @@ export default function Reader({
         const data = await res.json();
         const chapterWords = data.words as string[];
         if (chapterWords.length === 0) {
-          // Empty chapter — skip to next if available
           if (idx < totalChapters - 1) {
             setChapterIndex(idx + 1);
             return loadChapter(idx + 1);
           }
         }
         setWords(chapterWords);
+        setParagraphBreaks(data.paragraphBreaks || [0]);
         return true;
       } finally {
         setLoading(false);
@@ -85,12 +110,10 @@ export default function Reader({
     }
   }, [bookId]);
 
-  // Load initial chapter
   useEffect(() => {
     loadChapter(chapterIndex);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Handle pending chapter transition (triggered by end-of-chapter detection)
   useEffect(() => {
     if (pendingChapter === null) return;
     const nextCh = pendingChapter;
@@ -100,7 +123,6 @@ export default function Reader({
     loadChapter(nextCh);
   }, [pendingChapter, loadChapter]);
 
-  // Auto-save every 5s while playing
   useEffect(() => {
     if (playing) {
       saveTimerRef.current = setInterval(saveProgress, 5000);
@@ -110,7 +132,6 @@ export default function Reader({
     };
   }, [playing, saveProgress]);
 
-  // Word advancement via setInterval
   useEffect(() => {
     if (!playing || loading || words.length === 0) {
       if (intervalRef.current) clearInterval(intervalRef.current);
@@ -123,7 +144,6 @@ export default function Reader({
         const next = prev + 1;
         if (next >= words.length) {
           if (chapterIndexRef.current < totalChapters - 1) {
-            // Signal chapter transition — handled by the pendingChapter effect
             setPendingChapter(chapterIndexRef.current + 1);
             return 0;
           } else {
@@ -166,7 +186,6 @@ export default function Reader({
     [words.length]
   );
 
-  // Keyboard shortcuts
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
       if (e.key === " ") {
@@ -176,6 +195,8 @@ export default function Reader({
         skipWords(1);
       } else if (e.key === "ArrowLeft") {
         skipWords(-1);
+      } else if (e.key === "c" || e.key === "C") {
+        setShowContext((s) => !s);
       }
     }
     window.addEventListener("keydown", handleKey);
@@ -186,23 +207,47 @@ export default function Reader({
   const orpIdx = getOrpIndex(currentWord);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen gap-6 sm:gap-8 px-4 select-none">
-      {/* Word display — aria-live disabled during playback to avoid flooding screen readers */}
-      <div
-        className="text-3xl sm:text-5xl font-mono tracking-wider min-h-[1.5em] flex items-center justify-center"
-        aria-live={playing ? "off" : "polite"}
-        aria-label={`Current word: ${currentWord}`}
-        data-testid="word-display"
-      >
-        {loading ? (
-          <span className="text-foreground/30">Loading...</span>
-        ) : (
-          <span>
-            <span>{currentWord.slice(0, orpIdx)}</span>
-            <span className="text-red-500">{currentWord[orpIdx] || ""}</span>
-            <span>{currentWord.slice(orpIdx + 1)}</span>
-          </span>
-        )}
+    <div className="flex flex-col items-center justify-center min-h-screen gap-4 sm:gap-6 px-4 select-none">
+      {/* Context panel — above the word display */}
+      {showContext && !loading && (
+        <ContextPanel
+          words={words}
+          paragraphBreaks={paragraphBreaks}
+          wordIndex={wordIndex}
+        />
+      )}
+
+      {/* Word display */}
+      <div className="relative">
+        <div
+          className="text-3xl sm:text-5xl font-mono tracking-wider min-h-[1.5em] flex items-center justify-center"
+          aria-live={playing ? "off" : "polite"}
+          aria-label={`Current word: ${currentWord}`}
+          data-testid="word-display"
+        >
+          {loading ? (
+            <span className="text-foreground/30">Loading...</span>
+          ) : (
+            <span>
+              <span>{currentWord.slice(0, orpIdx)}</span>
+              <span className="text-red-500">{currentWord[orpIdx] || ""}</span>
+              <span>{currentWord.slice(orpIdx + 1)}</span>
+            </span>
+          )}
+        </div>
+        {/* Context toggle — sits in the top-right of the word display area */}
+        <button
+          onClick={() => setShowContext((s) => !s)}
+          className={`absolute -top-1 -right-8 sm:-right-10 p-1.5 rounded transition-colors ${
+            showContext
+              ? "text-foreground/70 bg-foreground/10"
+              : "text-foreground/20 hover:text-foreground/50"
+          }`}
+          aria-label={showContext ? "Hide context" : "Show context"}
+          title="Toggle paragraph context (C)"
+        >
+          <ContextToggleIcon active={showContext} />
+        </button>
       </div>
 
       {/* Controls */}

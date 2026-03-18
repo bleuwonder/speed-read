@@ -19,7 +19,7 @@ import {
   listBooks,
   getBook,
   getBookChapters,
-  getChapterWords,
+  getChapterContent,
   deleteBook,
   deleteBookKeepProgress,
   getProgress,
@@ -30,8 +30,8 @@ const sampleBook: ParsedBook = {
   title: "Test Book",
   author: "Test Author",
   chapters: [
-    { title: "Chapter One", words: ["the", "quick", "brown", "fox"] },
-    { title: "Chapter Two", words: ["speed", "reading", "is", "fun", "and", "fast"] },
+    { title: "Chapter One", words: ["the", "quick", "brown", "fox"], paragraphBreaks: [0] },
+    { title: "Chapter Two", words: ["speed", "reading", "is", "fun", "and", "fast"], paragraphBreaks: [0, 3] },
   ],
 };
 
@@ -114,26 +114,29 @@ describe("queries", () => {
     });
   });
 
-  describe("getChapterWords", () => {
-    it("returns words for a specific chapter", () => {
+  describe("getChapterContent", () => {
+    it("returns words and paragraph breaks for a chapter", () => {
       const book = insertBook(sampleBook, "test.epub", "epub");
-      const words = getChapterWords(book.id, 0);
-      expect(words).toEqual(["the", "quick", "brown", "fox"]);
+      const content = getChapterContent(book.id, 0);
+      expect(content).not.toBeNull();
+      expect(content!.words).toEqual(["the", "quick", "brown", "fox"]);
+      expect(content!.paragraphBreaks).toEqual([0]);
     });
 
-    it("returns words for second chapter", () => {
+    it("returns paragraph breaks for multi-paragraph chapter", () => {
       const book = insertBook(sampleBook, "test.epub", "epub");
-      const words = getChapterWords(book.id, 1);
-      expect(words).toEqual(["speed", "reading", "is", "fun", "and", "fast"]);
+      const content = getChapterContent(book.id, 1);
+      expect(content!.words).toEqual(["speed", "reading", "is", "fun", "and", "fast"]);
+      expect(content!.paragraphBreaks).toEqual([0, 3]);
     });
 
     it("returns null for nonexistent chapter", () => {
       const book = insertBook(sampleBook, "test.epub", "epub");
-      expect(getChapterWords(book.id, 99)).toBeNull();
+      expect(getChapterContent(book.id, 99)).toBeNull();
     });
 
     it("returns null for nonexistent book", () => {
-      expect(getChapterWords("fake", 0)).toBeNull();
+      expect(getChapterContent("fake", 0)).toBeNull();
     });
   });
 

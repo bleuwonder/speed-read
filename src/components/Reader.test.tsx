@@ -12,17 +12,19 @@ const defaultProps = {
 };
 
 const ch1Words = ["the", "quick", "brown", "fox"];
+const ch1Breaks = [0]; // one paragraph
 const ch2Words = ["speed", "reading", "is", "fun"];
+const ch2Breaks = [0];
 
 beforeEach(() => {
   vi.useFakeTimers();
   vi.spyOn(global, "fetch").mockImplementation(async (url) => {
     const urlStr = url.toString();
     if (urlStr.includes("/chapters/0")) {
-      return new Response(JSON.stringify({ words: ch1Words }));
+      return new Response(JSON.stringify({ words: ch1Words, paragraphBreaks: ch1Breaks }));
     }
     if (urlStr.includes("/chapters/1")) {
-      return new Response(JSON.stringify({ words: ch2Words }));
+      return new Response(JSON.stringify({ words: ch2Words, paragraphBreaks: ch2Breaks }));
     }
     if (urlStr.includes("/progress")) {
       return new Response(JSON.stringify({ ok: true }));
@@ -52,7 +54,6 @@ describe("Reader", () => {
     await act(async () => {
       await vi.runAllTimersAsync();
     });
-    // "quick" - ORP at index 1 (floor(5/2)-1 = 1) -> "u"
     const display = screen.getByTestId("word-display");
     const redSpan = display.querySelector(".text-red-500");
     expect(redSpan).toHaveTextContent("u");
@@ -85,7 +86,6 @@ describe("Reader", () => {
 
     fireEvent.click(screen.getByLabelText("Play"));
 
-    // Advance one word interval (60000/300 = 200ms)
     await act(async () => {
       await vi.advanceTimersByTimeAsync(200);
     });
@@ -148,7 +148,6 @@ describe("Reader", () => {
       await vi.runAllTimersAsync();
     });
 
-    // Play then pause
     fireEvent.click(screen.getByLabelText("Play"));
     fireEvent.click(screen.getByLabelText("Pause"));
 
@@ -186,5 +185,33 @@ describe("Reader", () => {
 
     fireEvent.keyDown(window, { key: "ArrowLeft" });
     expect(screen.getByTestId("word-display")).toHaveTextContent("the");
+  });
+
+  it("toggles context panel with button", async () => {
+    render(<Reader {...defaultProps} />);
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+
+    expect(screen.getByLabelText("Show context")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText("Show context"));
+    expect(screen.getByLabelText("Hide context")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText("Hide context"));
+    expect(screen.getByLabelText("Show context")).toBeInTheDocument();
+  });
+
+  it("toggles context panel with C key", async () => {
+    render(<Reader {...defaultProps} />);
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+
+    fireEvent.keyDown(window, { key: "c" });
+    expect(screen.getByLabelText("Hide context")).toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: "c" });
+    expect(screen.getByLabelText("Show context")).toBeInTheDocument();
   });
 });
