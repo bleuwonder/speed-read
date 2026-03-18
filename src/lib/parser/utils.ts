@@ -1,5 +1,7 @@
 export function textToWords(text: string): string[] {
-  return text.split(/\s+/).filter((w) => w.length > 0);
+  // Normalize Unicode whitespace (non-breaking spaces, thin spaces, etc.) before splitting
+  const normalized = text.replace(/[\u00A0\u2000-\u200B\u2028\u2029\u202F\u205F\u3000\uFEFF]/g, " ");
+  return normalized.split(/\s+/).filter((w) => w.length > 0);
 }
 
 const BLOCK_TAGS = /^(p|div|h[1-6]|li|ul|ol|blockquote|tr|td|th|table|section|article|header|footer|nav|aside|figure|figcaption|details|summary|pre|hr|br|dd|dt|dl)$/i;

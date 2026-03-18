@@ -1,6 +1,16 @@
 import { initEpubFile } from "@lingo-reader/epub-parser";
 import type { ParsedBook, ParsedChapter } from "./types";
-import { htmlToParagraphs } from "./utils";
+import { htmlToParagraphs, stripHtml } from "./utils";
+
+function sanitizeLabel(label: string): string {
+  // Strip HTML tags that may be in TOC labels
+  let clean = stripHtml(label);
+  // Normalize all Unicode whitespace to regular spaces
+  clean = clean.replace(/[\u00A0\u2000-\u200B\u2028\u2029\u202F\u205F\u3000\uFEFF]/g, " ");
+  // Collapse multiple spaces
+  clean = clean.replace(/\s+/g, " ").trim();
+  return clean;
+}
 
 export async function parseEpub(filePath: string): Promise<ParsedBook> {
   const epub = await initEpubFile(filePath);
@@ -11,12 +21,13 @@ export async function parseEpub(filePath: string): Promise<ParsedBook> {
   const tocEntries = new Map<string, string>();
   if (toc) {
     for (const entry of toc) {
+      const label = sanitizeLabel(entry.label || "");
       if (entry.href) {
         const baseHref = entry.href.split("#")[0];
-        tocEntries.set(baseHref, entry.label || "");
+        tocEntries.set(baseHref, label);
       }
       if (entry.id) {
-        tocEntries.set(entry.id, entry.label || "");
+        tocEntries.set(entry.id, label);
       }
     }
   }
