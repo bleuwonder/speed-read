@@ -259,8 +259,8 @@ export default function Reader({
           />
           <span className="text-xs text-foreground/50 w-10">1000</span>
         </div>
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-mono" data-testid="wpm-display">{wpm} WPM</span>
+        <div className="flex items-center w-full">
+          <span className="text-sm font-mono flex-1 text-center" data-testid="wpm-display">{wpm} WPM</span>
           <button
             onClick={() => setShowContext((s) => !s)}
             className={`p-1.5 rounded transition-colors ${
