@@ -12,25 +12,24 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("UploadForm", () => {
-  it("renders file input and upload button", () => {
+  it("renders drop zone with instructions", () => {
     render(<UploadForm onUploadComplete={mockOnUploadComplete} />);
-    expect(screen.getByLabelText("Select book file")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Upload" })).toBeInTheDocument();
+    expect(screen.getByText(/drop an epub or pdf/i)).toBeInTheDocument();
+    expect(screen.getByText(/click to browse/i)).toBeInTheDocument();
   });
 
-  it("accepts only epub and pdf files", () => {
+  it("has clickable upload area", () => {
     render(<UploadForm onUploadComplete={mockOnUploadComplete} />);
-    const input = screen.getByLabelText("Select book file");
-    expect(input).toHaveAttribute("accept", ".epub,.pdf");
+    expect(screen.getByRole("button", { name: "Upload book file" })).toBeInTheDocument();
   });
 
-  it("shows error for unsupported file types", async () => {
+  it("shows error for unsupported file types on file select", async () => {
     render(<UploadForm onUploadComplete={mockOnUploadComplete} />);
-    const input = screen.getByLabelText("Select book file") as HTMLInputElement;
+    const input = document.querySelector("input[type=file]") as HTMLInputElement;
     const file = new File(["content"], "test.txt", { type: "text/plain" });
 
     Object.defineProperty(input, "files", { value: [file], writable: false });
-    fireEvent.submit(screen.getByRole("button", { name: "Upload" }));
+    fireEvent.change(input);
 
     await waitFor(() => {
       expect(screen.getByRole("alert")).toHaveTextContent(
@@ -39,17 +38,17 @@ describe("UploadForm", () => {
     });
   });
 
-  it("calls onUploadComplete after successful upload", async () => {
+  it("auto-uploads on file select", async () => {
     vi.spyOn(global, "fetch").mockResolvedValue(
       new Response(JSON.stringify({ id: "1" }), { status: 201 })
     );
 
     render(<UploadForm onUploadComplete={mockOnUploadComplete} />);
-    const input = screen.getByLabelText("Select book file") as HTMLInputElement;
+    const input = document.querySelector("input[type=file]") as HTMLInputElement;
     const file = new File(["content"], "test.pdf", { type: "application/pdf" });
 
     Object.defineProperty(input, "files", { value: [file], writable: false });
-    fireEvent.submit(screen.getByRole("button", { name: "Upload" }));
+    fireEvent.change(input);
 
     await waitFor(() => {
       expect(mockOnUploadComplete).toHaveBeenCalled();
@@ -62,14 +61,32 @@ describe("UploadForm", () => {
     );
 
     render(<UploadForm onUploadComplete={mockOnUploadComplete} />);
-    const input = screen.getByLabelText("Select book file") as HTMLInputElement;
+    const input = document.querySelector("input[type=file]") as HTMLInputElement;
     const file = new File(["content"], "bad.epub", { type: "application/epub+zip" });
 
     Object.defineProperty(input, "files", { value: [file], writable: false });
-    fireEvent.submit(screen.getByRole("button", { name: "Upload" }));
+    fireEvent.change(input);
 
     await waitFor(() => {
       expect(screen.getByRole("alert")).toHaveTextContent("Parse failed");
+    });
+  });
+
+  it("auto-uploads on drag and drop", async () => {
+    vi.spyOn(global, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ id: "1" }), { status: 201 })
+    );
+
+    render(<UploadForm onUploadComplete={mockOnUploadComplete} />);
+    const dropZone = screen.getByRole("button", { name: "Upload book file" });
+
+    const file = new File(["content"], "test.epub", { type: "application/epub+zip" });
+    fireEvent.drop(dropZone, {
+      dataTransfer: { files: [file] },
+    });
+
+    await waitFor(() => {
+      expect(mockOnUploadComplete).toHaveBeenCalled();
     });
   });
 });

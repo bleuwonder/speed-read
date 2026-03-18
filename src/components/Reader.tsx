@@ -218,36 +218,21 @@ export default function Reader({
       )}
 
       {/* Word display */}
-      <div className="relative">
-        <div
-          className="text-3xl sm:text-5xl font-mono tracking-wider min-h-[1.5em] flex items-center justify-center"
-          aria-live={playing ? "off" : "polite"}
-          aria-label={`Current word: ${currentWord}`}
-          data-testid="word-display"
-        >
-          {loading ? (
-            <span className="text-foreground/30">Loading...</span>
-          ) : (
-            <span>
-              <span>{currentWord.slice(0, orpIdx)}</span>
-              <span className="text-red-500">{currentWord[orpIdx] || ""}</span>
-              <span>{currentWord.slice(orpIdx + 1)}</span>
-            </span>
-          )}
-        </div>
-        {/* Context toggle — sits in the top-right of the word display area */}
-        <button
-          onClick={() => setShowContext((s) => !s)}
-          className={`absolute -top-1 -right-8 sm:-right-10 p-1.5 rounded transition-colors ${
-            showContext
-              ? "text-foreground/70 bg-foreground/10"
-              : "text-foreground/20 hover:text-foreground/50"
-          }`}
-          aria-label={showContext ? "Hide context" : "Show context"}
-          title="Toggle paragraph context (C)"
-        >
-          <ContextToggleIcon active={showContext} />
-        </button>
+      <div
+        className="text-3xl sm:text-5xl font-mono tracking-wider min-h-[1.5em] flex items-center justify-center"
+        aria-live={playing ? "off" : "polite"}
+        aria-label={`Current word: ${currentWord}`}
+        data-testid="word-display"
+      >
+        {loading ? (
+          <span className="text-foreground/30">Loading...</span>
+        ) : (
+          <span>
+            <span>{currentWord.slice(0, orpIdx)}</span>
+            <span className="text-red-500">{currentWord[orpIdx] || ""}</span>
+            <span>{currentWord.slice(orpIdx + 1)}</span>
+          </span>
+        )}
       </div>
 
       {/* Controls */}
@@ -274,7 +259,21 @@ export default function Reader({
           />
           <span className="text-xs text-foreground/50 w-10">1000</span>
         </div>
-        <span className="text-sm font-mono" data-testid="wpm-display">{wpm} WPM</span>
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-mono" data-testid="wpm-display">{wpm} WPM</span>
+          <button
+            onClick={() => setShowContext((s) => !s)}
+            className={`p-1.5 rounded transition-colors ${
+              showContext
+                ? "text-foreground/70 bg-foreground/10"
+                : "text-foreground/20 hover:text-foreground/50"
+            }`}
+            aria-label={showContext ? "Hide context" : "Show context"}
+            title="Toggle paragraph context (C)"
+          >
+            <ContextToggleIcon active={showContext} />
+          </button>
+        </div>
 
         <select
           value={chapterIndex}

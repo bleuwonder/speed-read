@@ -77,7 +77,7 @@ export default function ContextPanel({ words, paragraphBreaks, wordIndex }: Cont
                   ref={isActive ? activeWordRef : undefined}
                   className={
                     isActive
-                      ? "text-foreground font-semibold opacity-100 bg-foreground/10 rounded px-0.5 -mx-0.5"
+                      ? "text-foreground opacity-100 bg-foreground/10 rounded px-0.5 -mx-0.5"
                       : ""
                   }
                 >
