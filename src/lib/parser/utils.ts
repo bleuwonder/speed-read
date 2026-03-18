@@ -3,39 +3,62 @@ export function textToWords(text: string): string[] {
 }
 
 const BLOCK_TAGS = /^(p|div|h[1-6]|li|ul|ol|blockquote|tr|td|th|table|section|article|header|footer|nav|aside|figure|figcaption|details|summary|pre|hr|br|dd|dt|dl)$/i;
+const INLINE_TAG = /<\/?(span|b|i|em|strong|a|u|s|small|sub|sup|abbr|cite|code|mark|q|time|var|del|ins|ruby|rt|rp|bdi|bdo|data|dfn|kbd|samp|wbr)(?:\s[^>]*)?>/gi;
 
-export function stripHtml(html: string): string {
-  // Replace block-level tags with spaces, remove inline tags silently
-  return html
-    .replace(/<\/?([\w-]+)[^>]*>/g, (match, tag) => BLOCK_TAGS.test(tag) ? " " : "")
-    .replace(/<br\s*\/?>/gi, " ")
+function decodeEntities(text: string): string {
+  return text
     .replace(/&nbsp;/g, " ")
     .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
-    .replace(/&#\d+;/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
+    .replace(/&apos;/g, "'")
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCharCode(parseInt(n, 16)));
+}
+
+/**
+ * Remove inline tags and fix word splits they cause.
+ *
+ * After removing inline tags, whitespace that was between tags can split
+ * words incorrectly. We fix this by:
+ * 1. Removing inline tags (no replacement)
+ * 2. Joining fragments where a short (1-2 char) piece is separated from
+ *    the next word by only whitespace — these are dropcap/styling splits
+ */
+function removeInlineTagsAndJoin(html: string): string {
+  // Remove inline tags entirely
+  let text = html.replace(INLINE_TAG, "");
+  // Fix dropcap splits: a short uppercase fragment (1-2 chars) at a word boundary
+  // followed by whitespace then a lowercase continuation.
+  // Only match at line/paragraph start or after whitespace (not mid-sentence).
+  // e.g., "\n  T\n  he" → "\n  The" but "Hello world" stays as is
+  text = text.replace(/(^|[\n\r])\s*([A-Z]{1,2})\s+([a-z])/gm, "$1$2$3");
+  return text;
+}
+
+export function stripHtml(html: string): string {
+  let text = removeInlineTagsAndJoin(html);
+  text = text.replace(/<\/?([\w-]+)[^>]*>/g, " ");
+  return decodeEntities(text).replace(/\s+/g, " ").trim();
 }
 
 export function htmlToParagraphs(html: string): { words: string[]; paragraphBreaks: number[] } {
-  // Insert paragraph markers at block-level boundaries
-  const withMarkers = html
+  // 1. Mark paragraph boundaries
+  let text = html
     .replace(/<\/(p|div|h[1-6]|li|blockquote|tr|section|article)>/gi, "\n\n")
     .replace(/<br\s*\/?>/gi, "\n\n");
 
-  // Strip remaining tags: inline tags removed silently, block opening tags get a space
-  const rawText = withMarkers
-    .replace(/<\/?([\w-]+)[^>]*>/g, (match, tag) => BLOCK_TAGS.test(tag) ? " " : "")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#\d+;/g, "");
+  // 2. Remove inline tags and fix word splits
+  text = removeInlineTagsAndJoin(text);
 
-  const paragraphs = rawText.split(/\n\s*\n/).map((p) => p.replace(/\s+/g, " ").trim()).filter(Boolean);
+  // 3. Replace remaining block tags with spaces
+  text = text.replace(/<\/?([\w-]+)[^>]*>/g, " ");
+
+  // 4. Decode entities
+  text = decodeEntities(text);
+
+  const paragraphs = text.split(/\n\s*\n/).map((p) => p.replace(/\s+/g, " ").trim()).filter(Boolean);
 
   const words: string[] = [];
   const paragraphBreaks: number[] = [];
