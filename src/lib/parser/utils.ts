@@ -29,13 +29,11 @@ function decodeEntities(text: string): string {
  *    the next word by only whitespace — these are dropcap/styling splits
  */
 function removeInlineTagsAndJoin(html: string): string {
-  // Remove inline tags entirely
   let text = html.replace(INLINE_TAG, "");
-  // Fix dropcap splits: a short uppercase fragment (1-2 chars) at a word boundary
-  // followed by whitespace then a lowercase continuation.
-  // Only match at line/paragraph start or after whitespace (not mid-sentence).
-  // e.g., "\n  T\n  he" → "\n  The" but "Hello world" stays as is
+  // Fix dropcap splits (lowercase continuation): "T\n  he" → "The"
   text = text.replace(/(^|[\n\r])\s*([A-Z]{1,2})\s+([a-z])/gm, "$1$2$3");
+  // Fix dropcap splits (ALL CAPS): "P RAISE" → "PRAISE", "W ORK" → "WORK"
+  text = text.replace(/\b([A-Z]) ([A-Z]{2,})\b/g, "$1$2");
   return text;
 }
 

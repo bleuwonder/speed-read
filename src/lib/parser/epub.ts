@@ -3,12 +3,13 @@ import type { ParsedBook, ParsedChapter } from "./types";
 import { htmlToParagraphs, stripHtml } from "./utils";
 
 function sanitizeLabel(label: string): string {
-  // Strip HTML tags that may be in TOC labels
   let clean = stripHtml(label);
-  // Normalize all Unicode whitespace to regular spaces
+  // Normalize Unicode whitespace
   clean = clean.replace(/[\u00A0\u2000-\u200B\u2028\u2029\u202F\u205F\u3000\uFEFF]/g, " ");
-  // Collapse multiple spaces
   clean = clean.replace(/\s+/g, " ").trim();
+  // Fix dropcap splits in ALL CAPS words: "F OREWORD" → "FOREWORD", "P ART" → "PART"
+  // Pattern: single uppercase letter + space + uppercase letters (not followed by lowercase)
+  clean = clean.replace(/\b([A-Z]) ([A-Z]{2,})\b/g, "$1$2");
   return clean;
 }
 
