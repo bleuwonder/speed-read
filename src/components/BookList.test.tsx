@@ -79,7 +79,7 @@ describe("BookList", () => {
     expect(dialog).toBeInTheDocument();
     expect(dialog).toHaveTextContent("Test Book One");
     expect(screen.getByText("Delete book and all data")).toBeInTheDocument();
-    expect(screen.getByText("Reset progress only")).toBeInTheDocument();
+    expect(screen.getByText("Delete book and keep progress")).toBeInTheDocument();
     expect(screen.getByText("Cancel")).toBeInTheDocument();
   });
 
@@ -105,18 +105,18 @@ describe("BookList", () => {
     });
   });
 
-  it("calls DELETE with resetOnly and refreshes on progress reset", async () => {
+  it("calls DELETE with keepProgress and refreshes", async () => {
     vi.spyOn(global, "fetch").mockResolvedValue(
       new Response(JSON.stringify({ ok: true }))
     );
 
     render(<BookList books={mockBooks} onBooksChanged={mockOnBooksChanged} />);
     fireEvent.click(screen.getByLabelText("Delete Test Book Two"));
-    fireEvent.click(screen.getByText("Reset progress only"));
+    fireEvent.click(screen.getByText("Delete book and keep progress"));
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
-        "/api/books/book-2?resetOnly=true",
+        "/api/books/book-2?keepProgress=true",
         { method: "DELETE" }
       );
       expect(mockOnBooksChanged).toHaveBeenCalled();

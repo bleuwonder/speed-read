@@ -57,11 +57,11 @@ export default function BookList({ books, onBooksChanged }: BookListProps) {
     );
   }
 
-  async function handleDelete(resetOnly: boolean) {
+  async function handleDelete(keepProgress: boolean) {
     if (!deleteDialog) return;
     setDeleting(true);
     try {
-      const url = `/api/books/${deleteDialog.bookId}${resetOnly ? "?resetOnly=true" : ""}`;
+      const url = `/api/books/${deleteDialog.bookId}${keepProgress ? "?keepProgress=true" : ""}`;
       await fetch(url, { method: "DELETE" });
       onBooksChanged();
     } finally {
@@ -139,7 +139,7 @@ export default function BookList({ books, onBooksChanged }: BookListProps) {
                 disabled={deleting}
                 className="w-full rounded border border-foreground/20 px-4 py-2 text-sm font-medium hover:bg-foreground/5 disabled:opacity-50"
               >
-                {deleting ? "Resetting..." : "Reset progress only"}
+                {deleting ? "Deleting..." : "Delete book and keep progress"}
               </button>
               <button
                 onClick={() => setDeleteDialog(null)}

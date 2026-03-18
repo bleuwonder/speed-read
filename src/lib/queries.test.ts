@@ -21,7 +21,7 @@ import {
   getBookChapters,
   getChapterWords,
   deleteBook,
-  resetProgress,
+  deleteBookKeepProgress,
   getProgress,
   upsertProgress,
 } from "./queries";
@@ -181,18 +181,24 @@ describe("queries", () => {
       expect(updated.wpm).toBe(400);
     });
 
-    it("resets progress without deleting book", () => {
+  });
+
+  describe("deleteBookKeepProgress", () => {
+    it("deletes book and chapters but keeps progress", () => {
       const book = insertBook(sampleBook, "test.epub", "epub");
       upsertProgress(book.id, 1, 3, 400);
-      expect(resetProgress(book.id)).toBe(true);
-      expect(getProgress(book.id)).toBeUndefined();
-      expect(getBook(book.id)).toBeDefined();
-      expect(getBookChapters(book.id)).toHaveLength(2);
+      expect(deleteBookKeepProgress(book.id)).toBe(true);
+      expect(getBook(book.id)).toBeUndefined();
+      expect(getBookChapters(book.id)).toHaveLength(0);
+      // Progress survives
+      const progress = getProgress(book.id);
+      expect(progress).toBeDefined();
+      expect(progress!.current_chapter_index).toBe(1);
+      expect(progress!.current_word_in_chapter).toBe(3);
     });
 
-    it("resetProgress returns false when no progress exists", () => {
-      const book = insertBook(sampleBook, "test.epub", "epub");
-      expect(resetProgress(book.id)).toBe(false);
+    it("returns false for nonexistent book", () => {
+      expect(deleteBookKeepProgress("nonexistent")).toBe(false);
     });
   });
 });

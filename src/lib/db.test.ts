@@ -62,7 +62,7 @@ describe("database schema", () => {
     }).toThrow();
   });
 
-  it("cascades delete from book to chapters and progress", () => {
+  it("cascades delete from book to chapters but not progress", () => {
     db.prepare(
       "INSERT INTO books (id, title, filename, format, total_words) VALUES (?, ?, ?, ?, ?)"
     ).run("book-1", "Test", "test.epub", "epub", 100);
@@ -80,7 +80,7 @@ describe("database schema", () => {
     const chapters = db.prepare("SELECT * FROM chapters WHERE book_id = ?").all("book-1");
     const progress = db.prepare("SELECT * FROM reading_progress WHERE book_id = ?").all("book-1");
     expect(chapters).toHaveLength(0);
-    expect(progress).toHaveLength(0);
+    expect(progress).toHaveLength(1); // progress survives book deletion
   });
 
   it("migrate is idempotent", () => {

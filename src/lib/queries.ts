@@ -116,13 +116,18 @@ export function getChapterWords(bookId: string, chapterIndex: number): string[] 
 
 export function deleteBook(id: string): boolean {
   const db = getDb();
-  const result = db.prepare("DELETE FROM books WHERE id = ?").run(id);
-  return result.changes > 0;
+  const del = db.transaction(() => {
+    db.prepare("DELETE FROM reading_progress WHERE book_id = ?").run(id);
+    const result = db.prepare("DELETE FROM books WHERE id = ?").run(id);
+    return result.changes > 0;
+  });
+  return del();
 }
 
-export function resetProgress(bookId: string): boolean {
+export function deleteBookKeepProgress(id: string): boolean {
   const db = getDb();
-  const result = db.prepare("DELETE FROM reading_progress WHERE book_id = ?").run(bookId);
+  // Chapters cascade from books FK, progress is independent
+  const result = db.prepare("DELETE FROM books WHERE id = ?").run(id);
   return result.changes > 0;
 }
 

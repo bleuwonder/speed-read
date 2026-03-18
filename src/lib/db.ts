@@ -39,7 +39,7 @@ export function migrate(database: Database.Database) {
     );
 
     CREATE TABLE IF NOT EXISTS reading_progress (
-      book_id TEXT PRIMARY KEY REFERENCES books(id) ON DELETE CASCADE,
+      book_id TEXT PRIMARY KEY,
       current_chapter_index INTEGER NOT NULL DEFAULT 0,
       current_word_in_chapter INTEGER NOT NULL DEFAULT 0,
       wpm INTEGER NOT NULL DEFAULT 300,

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getBook, getBookChapters, deleteBook, resetProgress } from "@/lib/queries";
+import { getBook, getBookChapters, deleteBook, deleteBookKeepProgress } from "@/lib/queries";
 
 export async function GET(
   _request: NextRequest,
@@ -20,16 +20,16 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const resetOnly = request.nextUrl.searchParams.get("resetOnly") === "true";
+  const keepProgress = request.nextUrl.searchParams.get("keepProgress") === "true";
 
   const book = getBook(id);
   if (!book) {
     return NextResponse.json({ error: "Book not found" }, { status: 404 });
   }
 
-  if (resetOnly) {
-    resetProgress(id);
-    return NextResponse.json({ ok: true, action: "progress_reset" });
+  if (keepProgress) {
+    deleteBookKeepProgress(id);
+    return NextResponse.json({ ok: true, action: "deleted_kept_progress" });
   }
 
   deleteBook(id);
