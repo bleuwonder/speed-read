@@ -120,6 +120,12 @@ export function deleteBook(id: string): boolean {
   return result.changes > 0;
 }
 
+export function resetProgress(bookId: string): boolean {
+  const db = getDb();
+  const result = db.prepare("DELETE FROM reading_progress WHERE book_id = ?").run(bookId);
+  return result.changes > 0;
+}
+
 export function getProgress(bookId: string): ProgressRow | undefined {
   const db = getDb();
   return db

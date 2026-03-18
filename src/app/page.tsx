@@ -49,7 +49,7 @@ export default function LibraryPage() {
             </button>
           </div>
         ) : (
-          <BookList books={books} />
+          <BookList books={books} onBooksChanged={fetchBooks} />
         )}
       </div>
     </main>
