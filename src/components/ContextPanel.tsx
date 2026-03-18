@@ -21,6 +21,7 @@ function getParagraphForWord(wordIndex: number, paragraphBreaks: number[]): numb
 export default function ContextPanel({ words, paragraphBreaks, wordIndex, onWordClick }: ContextPanelProps) {
   const activeWordRef = useRef<HTMLSpanElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const [userDetached, setUserDetached] = useState(false);
   const programmaticScrollRef = useRef(false);
 
@@ -57,38 +58,58 @@ export default function ContextPanel({ words, paragraphBreaks, wordIndex, onWord
     if (!el) return;
     function onScroll() {
       if (programmaticScrollRef.current) return;
-      // User scrolled manually — detach auto-follow
       setUserDetached(true);
     }
     el.addEventListener("scroll", onScroll, { passive: true });
     return () => el.removeEventListener("scroll", onScroll);
   }, []);
 
-  const scrollToActive = useCallback((behavior: ScrollBehavior = "instant") => {
-    if (!activeWordRef.current || !containerRef.current) return;
+  // Manually calculate scrollTop to pin active word at vertical center
+  const centerActiveWord = useCallback((smooth: boolean) => {
+    const container = containerRef.current;
+    const word = activeWordRef.current;
+    if (!container || !word) return;
+
+    // word.offsetTop is relative to its offsetParent — we need it relative to the scroll container's content
+    const wordRect = word.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+
+    // Where the word currently is relative to container's visible area
+    const wordRelativeTop = wordRect.top - containerRect.top + container.scrollTop;
+    // Target: put the word at the vertical center of the container
+    const targetScroll = wordRelativeTop - container.clientHeight / 2 + wordRect.height / 2;
+
     programmaticScrollRef.current = true;
-    activeWordRef.current.scrollIntoView?.({ block: "center", behavior });
-    const delay = behavior === "smooth" ? 300 : 50;
-    setTimeout(() => { programmaticScrollRef.current = false; }, delay);
+
+    if (smooth) {
+      container.scrollTo({ top: targetScroll, behavior: "smooth" });
+      setTimeout(() => { programmaticScrollRef.current = false; }, 400);
+    } else {
+      container.scrollTop = targetScroll;
+      // Use rAF to ensure the scroll completes before re-enabling user scroll detection
+      requestAnimationFrame(() => { programmaticScrollRef.current = false; });
+    }
   }, []);
 
-  // Auto-scroll to keep active word pinned in center — instant so line doesn't move
+  // Auto-center on every word change — instant (no animation) so line stays fixed
   useEffect(() => {
     if (userDetached) return;
-    scrollToActive("instant");
-  }, [wordIndex, userDetached, scrollToActive]);
+    // Use rAF to ensure DOM has updated with new active word ref
+    requestAnimationFrame(() => {
+      centerActiveWord(false);
+    });
+  }, [wordIndex, userDetached, centerActiveWord]);
 
   function reattach() {
     setUserDetached(false);
-    scrollToActive("smooth");
+    // Smooth scroll back when user re-engages
+    requestAnimationFrame(() => centerActiveWord(true));
   }
 
   function handleWordClick(idx: number) {
     onWordClick(idx);
     setUserDetached(false);
-    requestAnimationFrame(() => {
-      scrollToActive("smooth");
-    });
+    requestAnimationFrame(() => centerActiveWord(true));
   }
 
   if (words.length === 0 || paragraphBreaks.length === 0) return null;
@@ -99,35 +120,37 @@ export default function ContextPanel({ words, paragraphBreaks, wordIndex, onWord
         ref={containerRef}
         className="context-panel-scroll w-full h-full overflow-y-auto rounded-lg bg-foreground/[0.03] border border-foreground/[0.06] px-5 py-4 text-sm leading-relaxed"
       >
-        {visibleParagraphs.map((para) => (
-          <p
-            key={para.paraIdx}
-            className={`mb-3 last:mb-0 transition-opacity duration-300 ${
-              para.isCurrent ? "opacity-60" : "opacity-25"
-            }`}
-          >
-            {words.slice(para.startWord, para.endWord).map((word, i) => {
-              const globalIdx = para.startWord + i;
-              const isActive = globalIdx === wordIndex;
-              return (
-                <span key={globalIdx}>
-                  {i > 0 && " "}
-                  <span
-                    ref={isActive ? activeWordRef : undefined}
-                    onClick={() => handleWordClick(globalIdx)}
-                    className={`cursor-pointer hover:bg-foreground/10 rounded ${
-                      isActive
-                        ? "text-foreground opacity-100 bg-yellow-500/25 px-0.5 -mx-0.5"
-                        : ""
-                    }`}
-                  >
-                    {word}
+        <div ref={contentRef}>
+          {visibleParagraphs.map((para) => (
+            <p
+              key={para.paraIdx}
+              className={`mb-3 last:mb-0 transition-opacity duration-300 ${
+                para.isCurrent ? "opacity-60" : "opacity-25"
+              }`}
+            >
+              {words.slice(para.startWord, para.endWord).map((word, i) => {
+                const globalIdx = para.startWord + i;
+                const isActive = globalIdx === wordIndex;
+                return (
+                  <span key={globalIdx}>
+                    {i > 0 && " "}
+                    <span
+                      ref={isActive ? activeWordRef : undefined}
+                      onClick={() => handleWordClick(globalIdx)}
+                      className={`cursor-pointer hover:bg-foreground/10 rounded ${
+                        isActive
+                          ? "text-foreground opacity-100 bg-yellow-500/25 px-0.5 -mx-0.5"
+                          : ""
+                      }`}
+                    >
+                      {word}
+                    </span>
                   </span>
-                </span>
-              );
-            })}
-          </p>
-        ))}
+                );
+              })}
+            </p>
+          ))}
+        </div>
       </div>
 
       {userDetached && (
