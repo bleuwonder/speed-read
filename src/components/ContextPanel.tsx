@@ -64,30 +64,30 @@ export default function ContextPanel({ words, paragraphBreaks, wordIndex, onWord
     return () => el.removeEventListener("scroll", onScroll);
   }, []);
 
-  const smoothScrollToActive = useCallback(() => {
+  const scrollToActive = useCallback((behavior: ScrollBehavior = "instant") => {
     if (!activeWordRef.current || !containerRef.current) return;
     programmaticScrollRef.current = true;
-    activeWordRef.current.scrollIntoView?.({ block: "center", behavior: "smooth" });
-    // Reset flag after scroll animation settles
-    setTimeout(() => { programmaticScrollRef.current = false; }, 300);
+    activeWordRef.current.scrollIntoView?.({ block: "center", behavior });
+    const delay = behavior === "smooth" ? 300 : 50;
+    setTimeout(() => { programmaticScrollRef.current = false; }, delay);
   }, []);
 
-  // Auto-scroll to keep active word centered — unless user has detached
+  // Auto-scroll to keep active word pinned in center — instant so line doesn't move
   useEffect(() => {
     if (userDetached) return;
-    smoothScrollToActive();
-  }, [wordIndex, userDetached, smoothScrollToActive]);
+    scrollToActive("instant");
+  }, [wordIndex, userDetached, scrollToActive]);
 
   function reattach() {
     setUserDetached(false);
-    smoothScrollToActive();
+    scrollToActive("smooth");
   }
 
   function handleWordClick(idx: number) {
     onWordClick(idx);
     setUserDetached(false);
     requestAnimationFrame(() => {
-      smoothScrollToActive();
+      scrollToActive("smooth");
     });
   }
 
