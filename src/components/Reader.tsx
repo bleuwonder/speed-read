@@ -32,6 +32,7 @@ export default function Reader({
   const [wpm, setWpm] = useState(initialWpm);
   const [playing, setPlaying] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [pendingChapter, setPendingChapter] = useState<number | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const wordIndexRef = useRef(wordIndex);
@@ -75,6 +76,16 @@ export default function Reader({
     loadChapter(chapterIndex);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Handle pending chapter transition (triggered by end-of-chapter detection)
+  useEffect(() => {
+    if (pendingChapter === null) return;
+    const nextCh = pendingChapter;
+    setPendingChapter(null);
+    setChapterIndex(nextCh);
+    setWordIndex(0);
+    loadChapter(nextCh);
+  }, [pendingChapter, loadChapter]);
+
   // Auto-save every 5s while playing
   useEffect(() => {
     if (playing) {
@@ -85,7 +96,7 @@ export default function Reader({
     };
   }, [playing, saveProgress]);
 
-  // Word advancement
+  // Word advancement via setInterval
   useEffect(() => {
     if (!playing || loading || words.length === 0) {
       if (intervalRef.current) clearInterval(intervalRef.current);
@@ -97,11 +108,9 @@ export default function Reader({
       setWordIndex((prev) => {
         const next = prev + 1;
         if (next >= words.length) {
-          // End of chapter — try next
           if (chapterIndexRef.current < totalChapters - 1) {
-            const nextChapter = chapterIndexRef.current + 1;
-            setChapterIndex(nextChapter);
-            loadChapter(nextChapter);
+            // Signal chapter transition — handled by the pendingChapter effect
+            setPendingChapter(chapterIndexRef.current + 1);
             return 0;
           } else {
             setPlaying(false);
@@ -116,11 +125,11 @@ export default function Reader({
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [playing, loading, wpm, words.length, totalChapters, loadChapter, saveProgress]);
+  }, [playing, loading, wpm, words.length, totalChapters, saveProgress]);
 
   const togglePlay = useCallback(() => {
     setPlaying((p) => {
-      if (p) saveProgress(); // save on pause
+      if (p) saveProgress();
       return !p;
     });
   }, [saveProgress]);
@@ -164,10 +173,10 @@ export default function Reader({
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen gap-6 sm:gap-8 px-4 select-none">
-      {/* Word display */}
+      {/* Word display — aria-live disabled during playback to avoid flooding screen readers */}
       <div
         className="text-3xl sm:text-5xl font-mono tracking-wider min-h-[1.5em] flex items-center justify-center"
-        aria-live="polite"
+        aria-live={playing ? "off" : "polite"}
         aria-label={`Current word: ${currentWord}`}
         data-testid="word-display"
       >
@@ -184,7 +193,6 @@ export default function Reader({
 
       {/* Controls */}
       <div className="flex flex-col items-center gap-4 w-full max-w-md">
-        {/* Play/Pause */}
         <button
           onClick={togglePlay}
           className="rounded-full bg-foreground text-background w-14 h-14 text-xl font-bold"
@@ -193,7 +201,6 @@ export default function Reader({
           {playing ? "||" : "\u25B6"}
         </button>
 
-        {/* WPM slider */}
         <div className="flex items-center gap-3 w-full">
           <span className="text-xs text-foreground/50 w-8">100</span>
           <input
@@ -210,7 +217,6 @@ export default function Reader({
         </div>
         <span className="text-sm font-mono" data-testid="wpm-display">{wpm} WPM</span>
 
-        {/* Chapter selector */}
         <select
           value={chapterIndex}
           onChange={(e) => jumpToChapter(Number(e.target.value))}
@@ -224,7 +230,6 @@ export default function Reader({
           ))}
         </select>
 
-        {/* Position info */}
         <p className="text-xs text-foreground/40">
           Word {wordIndex + 1} of {words.length} in chapter {chapterIndex + 1}/{totalChapters}
         </p>

@@ -1,22 +1,6 @@
 import { initEpubFile } from "@lingo-reader/epub-parser";
 import type { ParsedBook, ParsedChapter } from "./types";
-
-function stripHtml(html: string): string {
-  return html
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#\d+;/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function textToWords(text: string): string[] {
-  return text.split(/\s+/).filter((w) => w.length > 0);
-}
+import { textToWords, stripHtml } from "./utils";
 
 export async function parseEpub(filePath: string): Promise<ParsedBook> {
   const epub = await initEpubFile(filePath);
@@ -24,8 +8,7 @@ export async function parseEpub(filePath: string): Promise<ParsedBook> {
   const spine = epub.getSpine();
   const toc = epub.getToc();
 
-  // Build a set of spine item IDs/hrefs that are actual TOC entries
-  const tocEntries = new Map<string, string>(); // href (without fragment) -> label
+  const tocEntries = new Map<string, string>();
   if (toc) {
     for (const entry of toc) {
       if (entry.href) {
@@ -38,7 +21,6 @@ export async function parseEpub(filePath: string): Promise<ParsedBook> {
     }
   }
 
-  // Load all spine items and figure out which ones are TOC chapter starts
   const spineContent: { id: string; href: string; words: string[]; tocTitle: string | null }[] = [];
 
   for (const item of spine) {
@@ -55,28 +37,20 @@ export async function parseEpub(filePath: string): Promise<ParsedBook> {
     spineContent.push({ id: item.id, href: baseHref, words, tocTitle });
   }
 
-  // Merge spine items into chapters using TOC as boundaries.
-  // If a spine item has a TOC entry, it starts a new chapter.
-  // If it doesn't, its words get appended to the previous chapter.
-  // If there are no TOC entries at all, fall back to one chapter per spine item.
   const hasToc = spineContent.some((s) => s.tocTitle !== null);
   const chapters: ParsedChapter[] = [];
 
   if (hasToc) {
     for (const item of spineContent) {
       if (item.tocTitle !== null) {
-        // Start a new chapter
         chapters.push({ title: item.tocTitle, words: [...item.words] });
       } else if (chapters.length > 0) {
-        // Merge into previous chapter
         chapters[chapters.length - 1].words.push(...item.words);
       } else {
-        // Content before first TOC entry — create a "Front Matter" chapter
         chapters.push({ title: "Front Matter", words: [...item.words] });
       }
     }
   } else {
-    // No TOC — each spine item is a chapter
     for (let i = 0; i < spineContent.length; i++) {
       chapters.push({
         title: `Chapter ${i + 1}`,

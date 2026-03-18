@@ -72,6 +72,8 @@ export function insertBook(
 
 export function listBooks(): (BookRow & { progress_pct: number })[] {
   const db = getDb();
+  // Clean up orphaned progress rows from "delete book, keep progress" that were never re-uploaded
+  db.prepare("DELETE FROM reading_progress WHERE book_id NOT IN (SELECT id FROM books) AND updated_at < datetime('now', '-30 days')").run();
   return db
     .prepare(
       `SELECT b.*,
@@ -158,4 +160,12 @@ export function upsertProgress(
   return db
     .prepare("SELECT * FROM reading_progress WHERE book_id = ?")
     .get(bookId) as ProgressRow;
+}
+
+export function cleanOrphanedProgress(): number {
+  const db = getDb();
+  const result = db.prepare(
+    "DELETE FROM reading_progress WHERE book_id NOT IN (SELECT id FROM books)"
+  ).run();
+  return result.changes;
 }

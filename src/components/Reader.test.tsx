@@ -81,6 +81,8 @@ describe("Reader", () => {
       await vi.runAllTimersAsync();
     });
 
+    expect(screen.getByTestId("word-display")).toHaveTextContent("the");
+
     fireEvent.click(screen.getByLabelText("Play"));
 
     // Advance one word interval (60000/300 = 200ms)

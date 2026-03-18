@@ -1,10 +1,7 @@
 import { getDocumentProxy, extractText } from "unpdf";
 import { readFile } from "fs/promises";
 import type { ParsedBook, ParsedChapter } from "./types";
-
-function textToWords(text: string): string[] {
-  return text.split(/\s+/).filter((w) => w.length > 0);
-}
+import { textToWords } from "./utils";
 
 // Detect if a page starts with what looks like a chapter heading:
 // - Short first line (< 50 chars)
@@ -32,7 +29,6 @@ export async function parsePdf(filePath: string): Promise<ParsedBook> {
   const pdf = await getDocumentProxy(new Uint8Array(buffer));
   const { text: pages } = await extractText(pdf, { mergePages: false });
 
-  // First pass: identify chapter boundaries
   const chapters: ParsedChapter[] = [];
 
   for (let i = 0; i < pages.length; i++) {
@@ -45,18 +41,14 @@ export async function parsePdf(filePath: string): Promise<ParsedBook> {
     const chapterTitle = isChapterStart(pageText);
 
     if (chapterTitle !== null) {
-      // This page starts a new chapter
       chapters.push({ title: chapterTitle, words: [...words] });
     } else if (chapters.length > 0) {
-      // Append to current chapter
       chapters[chapters.length - 1].words.push(...words);
     } else {
-      // Content before first chapter detected — start a default chapter
       chapters.push({ title: "Chapter 1", words: [...words] });
     }
   }
 
-  // If no chapter boundaries were detected at all, put everything in one chapter
   if (chapters.length === 0) {
     const allWords = pages.flatMap((p) => textToWords(p.trim()));
     if (allWords.length > 0) {
@@ -64,27 +56,16 @@ export async function parsePdf(filePath: string): Promise<ParsedBook> {
     }
   }
 
-  // Try to extract title from PDF metadata
   let title = "Unknown Title";
+  let author: string | null = null;
+
   try {
     const meta = await pdf.getMetadata();
     const info = meta?.info as Record<string, string> | undefined;
-    if (info?.Title && info.Title.trim()) {
-      title = info.Title.trim();
-    }
+    if (info?.Title?.trim()) title = info.Title.trim();
+    if (info?.Author?.trim()) author = info.Author.trim();
   } catch {
     // metadata extraction is optional
-  }
-
-  let author: string | null = null;
-  try {
-    const meta = await pdf.getMetadata();
-    const info = meta?.info as Record<string, string> | undefined;
-    if (info?.Author && info.Author.trim()) {
-      author = info.Author.trim();
-    }
-  } catch {
-    // optional
   }
 
   return { title, author, chapters };

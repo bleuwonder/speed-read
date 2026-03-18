@@ -57,16 +57,25 @@ export default function BookList({ books, onBooksChanged }: BookListProps) {
     );
   }
 
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
   async function handleDelete(keepProgress: boolean) {
     if (!deleteDialog) return;
     setDeleting(true);
+    setDeleteError(null);
     try {
       const url = `/api/books/${deleteDialog.bookId}${keepProgress ? "?keepProgress=true" : ""}`;
-      await fetch(url, { method: "DELETE" });
+      const res = await fetch(url, { method: "DELETE" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Delete failed");
+      }
+      setDeleteDialog(null);
       onBooksChanged();
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : "Delete failed");
     } finally {
       setDeleting(false);
-      setDeleteDialog(null);
     }
   }
 
@@ -141,8 +150,11 @@ export default function BookList({ books, onBooksChanged }: BookListProps) {
               >
                 {deleting ? "Deleting..." : "Delete book and keep progress"}
               </button>
+              {deleteError && (
+                <p role="alert" className="text-red-500 text-sm text-center">{deleteError}</p>
+              )}
               <button
-                onClick={() => setDeleteDialog(null)}
+                onClick={() => { setDeleteDialog(null); setDeleteError(null); }}
                 disabled={deleting}
                 className="w-full rounded px-4 py-2 text-sm text-foreground/50 hover:text-foreground disabled:opacity-50"
               >
