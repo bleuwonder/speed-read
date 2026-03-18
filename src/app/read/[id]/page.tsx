@@ -2,6 +2,7 @@
 
 import { use, useEffect, useState } from "react";
 import Reader from "@/components/Reader";
+import ThemeToggle from "@/components/ThemeToggle";
 import Link from "next/link";
 
 interface BookDetail {
@@ -72,8 +73,9 @@ export default function ReaderPage({
           &larr; Library
         </Link>
       </div>
-      <div className="absolute top-4 right-4">
-        <span className="text-sm text-foreground/50">{book.title}</span>
+      <div className="absolute top-4 right-4 flex items-center gap-3">
+        <span className="text-sm text-foreground/50 hidden sm:inline">{book.title}</span>
+        <ThemeToggle />
       </div>
       <Reader
         bookId={id}

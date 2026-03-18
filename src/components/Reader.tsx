@@ -163,10 +163,10 @@ export default function Reader({
   const orpIdx = getOrpIndex(currentWord);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen gap-8 select-none">
+    <div className="flex flex-col items-center justify-center min-h-screen gap-6 sm:gap-8 px-4 select-none">
       {/* Word display */}
       <div
-        className="text-5xl font-mono tracking-wider min-h-[1.5em] flex items-center justify-center"
+        className="text-3xl sm:text-5xl font-mono tracking-wider min-h-[1.5em] flex items-center justify-center"
         aria-live="polite"
         aria-label={`Current word: ${currentWord}`}
         data-testid="word-display"

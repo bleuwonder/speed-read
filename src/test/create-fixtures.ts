@@ -92,7 +92,7 @@ async function createTestEpub() {
   );
 
   await archive.finalize();
-  await new Promise((resolve) => output.on("close", resolve));
+  await new Promise<void>((resolve) => output.on("close", () => resolve()));
   console.log("Created test.epub");
 }
 
