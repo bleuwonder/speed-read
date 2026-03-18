@@ -20,6 +20,13 @@ export function getDb(): Database.Database {
   return db;
 }
 
+function addColumnIfMissing(database: Database.Database, table: string, column: string, definition: string) {
+  const cols = database.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+  if (!cols.some((c) => c.name === column)) {
+    database.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  }
+}
+
 export function migrate(database: Database.Database) {
   database.exec(`
     CREATE TABLE IF NOT EXISTS books (
@@ -52,6 +59,8 @@ export function migrate(database: Database.Database) {
       updated_at DATETIME NOT NULL DEFAULT (datetime('now'))
     );
   `);
+
+  addColumnIfMissing(database, "chapters", "paragraph_breaks", "JSON NOT NULL DEFAULT '[]'");
 }
 
 export function closeDb() {
