@@ -13,9 +13,16 @@ describe("EPUB parser", () => {
     expect(book.author).toBe("Test Author");
   });
 
-  it("extracts chapters with words", async () => {
+  it("uses TOC entries as chapter boundaries", async () => {
     const book = await parseEpub(path.join(FIXTURES, "test.epub"));
-    expect(book.chapters.length).toBeGreaterThanOrEqual(2);
+    // Test EPUB has 2 TOC entries: "Chapter One" and "Chapter Two"
+    expect(book.chapters.length).toBe(2);
+    expect(book.chapters[0].title).toBe("Chapter One");
+    expect(book.chapters[1].title).toBe("Chapter Two");
+  });
+
+  it("chapters contain words", async () => {
+    const book = await parseEpub(path.join(FIXTURES, "test.epub"));
     expect(book.chapters[0].words.length).toBeGreaterThan(0);
     expect(book.chapters[1].words.length).toBeGreaterThan(0);
   });
@@ -43,10 +50,19 @@ describe("EPUB parser", () => {
 });
 
 describe("PDF parser", () => {
-  it("extracts chapters (pages) with words", async () => {
+  it("detects chapter boundaries from page headings", async () => {
     const book = await parsePdf(path.join(FIXTURES, "test.pdf"));
-    expect(book.chapters.length).toBeGreaterThanOrEqual(2);
+    // Test PDF has "Chapter One" on page 1 and "Chapter Two" on page 2
+    expect(book.chapters.length).toBe(2);
+    expect(book.chapters[0].title).toBe("Chapter One");
+    expect(book.chapters[1].title).toBe("Chapter Two");
+  });
+
+  it("merges non-chapter pages into previous chapter", async () => {
+    const book = await parsePdf(path.join(FIXTURES, "test.pdf"));
+    // With only 2 pages that are both chapter starts, each should have its own words
     expect(book.chapters[0].words.length).toBeGreaterThan(0);
+    expect(book.chapters[1].words.length).toBeGreaterThan(0);
   });
 
   it("contains expected words from content", async () => {
@@ -55,11 +71,6 @@ describe("PDF parser", () => {
     expect(allWords).toContain("quick");
     expect(allWords).toContain("brown");
     expect(allWords).toContain("fox");
-  });
-
-  it("uses first line as chapter title when short", async () => {
-    const book = await parsePdf(path.join(FIXTURES, "test.pdf"));
-    expect(book.chapters[0].title).toBe("Chapter One");
   });
 
   it("throws on nonexistent file", async () => {
