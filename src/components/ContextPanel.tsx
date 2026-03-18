@@ -6,6 +6,7 @@ interface ContextPanelProps {
   words: string[];
   paragraphBreaks: number[];
   wordIndex: number;
+  onWordClick: (index: number) => void;
 }
 
 function getParagraphForWord(wordIndex: number, paragraphBreaks: number[]): number {
@@ -17,7 +18,7 @@ function getParagraphForWord(wordIndex: number, paragraphBreaks: number[]): numb
   return paraIdx;
 }
 
-export default function ContextPanel({ words, paragraphBreaks, wordIndex }: ContextPanelProps) {
+export default function ContextPanel({ words, paragraphBreaks, wordIndex, onWordClick }: ContextPanelProps) {
   const activeWordRef = useRef<HTMLSpanElement>(null);
 
   const currentParaIdx = useMemo(
@@ -25,23 +26,19 @@ export default function ContextPanel({ words, paragraphBreaks, wordIndex }: Cont
     [wordIndex, paragraphBreaks]
   );
 
-  // Build paragraphs to display: current + next
   const visibleParagraphs = useMemo(() => {
     const result: { paraIdx: number; startWord: number; endWord: number; isCurrent: boolean }[] = [];
 
-    // Show one paragraph before current for context (if exists)
     if (currentParaIdx > 0) {
       const prevStart = paragraphBreaks[currentParaIdx - 1];
       const prevEnd = paragraphBreaks[currentParaIdx] ?? words.length;
       result.push({ paraIdx: currentParaIdx - 1, startWord: prevStart, endWord: prevEnd, isCurrent: false });
     }
 
-    // Current paragraph
     const curStart = paragraphBreaks[currentParaIdx] ?? 0;
     const curEnd = paragraphBreaks[currentParaIdx + 1] ?? words.length;
     result.push({ paraIdx: currentParaIdx, startWord: curStart, endWord: curEnd, isCurrent: true });
 
-    // Next paragraph
     if (currentParaIdx + 1 < paragraphBreaks.length) {
       const nextStart = paragraphBreaks[currentParaIdx + 1];
       const nextEnd = paragraphBreaks[currentParaIdx + 2] ?? words.length;
@@ -51,7 +48,6 @@ export default function ContextPanel({ words, paragraphBreaks, wordIndex }: Cont
     return result;
   }, [currentParaIdx, paragraphBreaks, words.length]);
 
-  // Auto-scroll to keep active word visible
   useEffect(() => {
     activeWordRef.current?.scrollIntoView?.({ block: "center", behavior: "smooth" });
   }, [wordIndex]);
@@ -75,11 +71,12 @@ export default function ContextPanel({ words, paragraphBreaks, wordIndex }: Cont
                 {i > 0 && " "}
                 <span
                   ref={isActive ? activeWordRef : undefined}
-                  className={
+                  onClick={() => onWordClick(globalIdx)}
+                  className={`cursor-pointer hover:bg-foreground/10 rounded ${
                     isActive
-                      ? "text-foreground opacity-100 bg-yellow-500/25 rounded px-0.5 -mx-0.5"
+                      ? "text-foreground opacity-100 bg-yellow-500/25 px-0.5 -mx-0.5"
                       : ""
-                  }
+                  }`}
                 >
                   {word}
                 </span>

@@ -214,6 +214,7 @@ export default function Reader({
           words={words}
           paragraphBreaks={paragraphBreaks}
           wordIndex={wordIndex}
+          onWordClick={(idx) => setWordIndex(idx)}
         />
       )}
 
