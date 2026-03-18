@@ -47,6 +47,15 @@ export async function PUT(
     );
   }
 
-  const progress = upsertProgress(id, current_chapter_index, current_word_in_chapter, wpm);
+  if (current_chapter_index < 0 || current_word_in_chapter < 0) {
+    return NextResponse.json(
+      { error: "Indices must be non-negative" },
+      { status: 400 }
+    );
+  }
+
+  const clampedWpm = Math.max(100, Math.min(1000, Math.round(wpm)));
+
+  const progress = upsertProgress(id, current_chapter_index, current_word_in_chapter, clampedWpm);
   return NextResponse.json(progress);
 }

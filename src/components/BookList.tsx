@@ -48,6 +48,7 @@ function TrashIcon() {
 export default function BookList({ books, onBooksChanged }: BookListProps) {
   const [deleteDialog, setDeleteDialog] = useState<DeleteDialogState | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   if (books.length === 0) {
     return (
@@ -56,8 +57,6 @@ export default function BookList({ books, onBooksChanged }: BookListProps) {
       </p>
     );
   }
-
-  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   async function handleDelete(keepProgress: boolean) {
     if (!deleteDialog) return;

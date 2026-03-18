@@ -33,6 +33,7 @@ export default function Reader({
   const [playing, setPlaying] = useState(false);
   const [loading, setLoading] = useState(true);
   const [pendingChapter, setPendingChapter] = useState<number | null>(null);
+  const [saveError, setSaveError] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const wordIndexRef = useRef(wordIndex);
@@ -50,25 +51,38 @@ export default function Reader({
         const res = await fetch(`/api/books/${bookId}/chapters/${idx}`);
         if (!res.ok) return false;
         const data = await res.json();
-        setWords(data.words);
+        const chapterWords = data.words as string[];
+        if (chapterWords.length === 0) {
+          // Empty chapter — skip to next if available
+          if (idx < totalChapters - 1) {
+            setChapterIndex(idx + 1);
+            return loadChapter(idx + 1);
+          }
+        }
+        setWords(chapterWords);
         return true;
       } finally {
         setLoading(false);
       }
     },
-    [bookId]
+    [bookId, totalChapters]
   );
 
   const saveProgress = useCallback(async () => {
-    await fetch(`/api/books/${bookId}/progress`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        current_chapter_index: chapterIndexRef.current,
-        current_word_in_chapter: wordIndexRef.current,
-        wpm: wpmRef.current,
-      }),
-    });
+    try {
+      const res = await fetch(`/api/books/${bookId}/progress`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          current_chapter_index: chapterIndexRef.current,
+          current_word_in_chapter: wordIndexRef.current,
+          wpm: wpmRef.current,
+        }),
+      });
+      setSaveError(!res.ok);
+    } catch {
+      setSaveError(true);
+    }
   }, [bookId]);
 
   // Load initial chapter
@@ -232,6 +246,7 @@ export default function Reader({
 
         <p className="text-xs text-foreground/40">
           Word {wordIndex + 1} of {words.length} in chapter {chapterIndex + 1}/{totalChapters}
+          {saveError && <span className="text-red-500 ml-2">Save failed</span>}
         </p>
       </div>
     </div>
