@@ -34,12 +34,3 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
-
-.context-panel-scroll {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.context-panel-scroll::-webkit-scrollbar {
-  display: none;
-}
